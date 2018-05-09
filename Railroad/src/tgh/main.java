@@ -28,7 +28,7 @@ public class main {
                 Comparator.comparingInt(Hrana::getMirazateze).thenComparingInt(Hrana::getCenauseku));
     }
 
-    private int [] kruskaluj(int pocet) {
+    private int[] kruskaluj(int pocet) {
         // setřídí nejprve list dle ohodnocení hran (nejprve zátěž a poté cena) od nejmenší po největší
         setridlist();
         for (int i = 0; i < hrany.size(); i++) {
@@ -44,7 +44,7 @@ public class main {
             }
         }
         // vrací výslednou kostru od města n-1
-        return (g.vyslednakostra(pocet-1));
+        return (g.vyslednakostra(pocet - 1));
     }
 
     /**
@@ -60,8 +60,8 @@ public class main {
         hrany.add(new Hrana(od, to, cena, mirazateze, poradi));
     }
 
-    public static void main(String[] args){
-        
+    public static void main(String[] args) {
+
         if (sc.hasNextInt()) {
             int pocet = sc.nextInt();
             int pocetvariant = sc.nextInt();
@@ -70,13 +70,13 @@ public class main {
                 krus.pridejHrany(sc.nextInt(), sc.nextInt(), sc.nextInt(), sc.nextInt(), i);
             }
             krus.kruskaluj(pocet);
-            int [] j =krus.kruskaluj(pocet);
-        for(int i=0;i<j.length;i++)
-        {
-            System.out.println(j[i]);
-        }
+            int[] j = krus.kruskaluj(pocet);
+            for (int i = 0; i < j.length; i++) {
+                System.out.println(j[i]);
+            }
         }
     }
+
     // třída DisjointSet udržující informace o příslušnosti ke komponentě
     // souvislosti
     class DisjointSet {
@@ -191,6 +191,7 @@ public class main {
     class Graf {
 
         ArrayList<Hrana> hrany;
+
         public Graf() {
             hrany = new ArrayList();
             //poledeti = new ArrayList();
@@ -199,22 +200,19 @@ public class main {
         public void pridejVysledek(Hrana h) {
             hrany.add(h);
         }
-        // vypíše výsledek výsledné kostry od dětí k předkům
-        public int [] vyslednakostra(int nula) {
-             int [] vysledek = new int[nula];
-              for(int i=nula;i>0;i--)
-              {
-            final int j=i;
-            Hrana h = hrany.stream().filter(o -> o.getDruhy() == j).findFirst().get();
-           vysledek[i-1] =(h.getPoradi());
-            nula--;
-              }                                              
-           return vysledek;     
-            }
-            
-           
 
+        // vypíše výsledek výsledné kostry od dětí k předkům
+        public int[] vyslednakostra(int nula) {
+            int[] vysledek = new int[nula];
+            for (int i = nula; i > 0; i--) {
+                final int j = i;
+                Hrana h = hrany.stream().filter(o -> o.getDruhy() == j).findFirst().get();
+                vysledek[i - 1] = (h.getPoradi());
+                nula--;
+            }
+            return vysledek;
         }
 
     }
 
+}
