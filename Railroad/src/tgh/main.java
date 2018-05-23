@@ -18,33 +18,42 @@ public class main {
     //strom zakořeněný ve městě 0 (rekurze)
     private final Graf g;
     // seznam spojení od města k městu
-    private final ArrayList<Hrana> hrany;
+    private final ArrayList<Edge> hrany;
     // DisjointSet struktura
     private final DisjointSet dis;
     private static final Scanner sc = new Scanner(System.in);
 
     private void setridlist() {
         hrany.sort(
-                Comparator.comparingInt(Hrana::getMirazateze).thenComparingInt(Hrana::getCenauseku));
+                Comparator.comparingInt(Edge::getMirazateze).thenComparingInt(Edge::getCenauseku));
     }
 
     private int[] kruskaluj(int pocet) {
         // setřídí nejprve list dle ohodnocení hran (nejprve zátěž a poté cena) od nejmenší po největší
         setridlist();
+        //pocet pridanych hran
+        int count = 0;
         for (int i = 0; i < hrany.size(); i++) {
-            Hrana h = hrany.get(i);
+
+            Edge h = hrany.get(i);
             // pokud je nalezeno n-1 spojení (minimální kostra grafu)
-            if (pocet - 1 != g.hrany.size()) {
+            if (count != pocet - 1) {
                 // pokud nepatří ke stejné komponentě souvislosti, tak se přidá hrana
                 // do výsledného grafu
                 if (dis.findparent(h.getPrvni()) != dis.findparent(h.getDruhy())) {
                     dis.union(h.getPrvni(), h.getDruhy());
+                    count++;
                     g.pridejVysledek(h);
                 }
+            } else {
+                // nalezeno n-1 vrcholu, je třeba přerušit
+                break;
             }
+
         }
-        // vrací výslednou kostru od města n-1
-        return (g.vyslednakostra(pocet - 1));
+        g.kostramake(pocet - 1);
+        return g.vyslednakostra(pocet - 1);
+
     }
 
     /**
@@ -53,11 +62,11 @@ public class main {
     public main(int pocet) {
         hrany = new ArrayList<>();
         dis = new DisjointSet(pocet);
-        g = new Graf();
+        g = new Graf(pocet - 1);
     }
 
     private void pridejHrany(int od, int to, int cena, int mirazateze, int poradi) {
-        hrany.add(new Hrana(od, to, cena, mirazateze, poradi));
+        hrany.add(new Edge(od, to, cena, mirazateze, poradi));
     }
 
     public static void main(String[] args) {
@@ -69,150 +78,217 @@ public class main {
             for (int i = 0; i < pocetvariant; i++) {
                 krus.pridejHrany(sc.nextInt(), sc.nextInt(), sc.nextInt(), sc.nextInt(), i);
             }
-            krus.kruskaluj(pocet);
+            //krus.kruskaluj(pocet);
             int[] j = krus.kruskaluj(pocet);
             for (int i = 0; i < j.length; i++) {
                 System.out.println(j[i]);
             }
         }
     }
+}
 
-    // třída DisjointSet udržující informace o příslušnosti ke komponentě
-    // souvislosti
-    class DisjointSet {
+// třída DisjointSet udržující informace o příslušnosti ke komponentě
+// souvislosti
+class DisjointSet {
 
-        ArrayList<Vrchol> vrcholy;
+    ArrayList<Node> vrcholy;
 
-        public Vrchol getVrcholonIndex(int index) {
-            return vrcholy.get(index);
+    public Node getVrcholonIndex(int index) {
+        return vrcholy.get(index);
+    }
+
+    public DisjointSet(int pocet) {
+        vrcholy = new ArrayList();
+
+        for (int i = 0; i < pocet; i++) {
+            makeset(i);
         }
+    }
+    // vytvoří set pro každý uzel, který je sám sobě rodičem
 
-        public DisjointSet(int pocet) {
-            vrcholy = new ArrayList();
+    private void makeset(int index) {
+        Node v = new Node(index);
+        this.vrcholy.add(v);
+    }
+    // najde rodiče pro zadaný vrchol a vrátí vrchol
 
-            for (int i = 0; i < pocet; i++) {
+    public Node findparent(int parent) {
 
-                makeset(i);
+        Node v = vrcholy.get(parent);
+        if (v.getParent() == v.getHodnota()) {
+            return v;
+        } else {
 
-            }
-        }
-        // vytvoří set pro každý uzel, který je sám sobě rodičem
+            return findparent(v.getParent());
 
-        private void makeset(int index) {
-            Vrchol v = new Vrchol(index);
-            this.vrcholy.add(v);
-        }
-        // najde rodiče pro zadaný vrchol a vrátí vrchol
-
-        public Vrchol findparent(int parent) {
-
-            Vrchol v = vrcholy.get(parent);
-            if (v.parent == v.hodnota) {
-                return v;
-            } else {
-
-                return findparent(v.parent);
-
-            }
-
-        }
-        // spojí dva vrcholy, pokud nejsou ve stejné skupině
-
-        public void union(int prvni, int druhy) {
-            Vrchol par1 = findparent(vrcholy.get(prvni).hodnota);
-            Vrchol par2 = findparent(vrcholy.get(druhy).hodnota);
-            if (par1 != par2) {
-                if (par1.rank >= par2.rank) {
-                    if (par1.rank == par2.rank) {
-                        par1.rank++;
-                    }
-                    par2.parent = par1.hodnota;
-                } else {
-                    par1.parent = par2.hodnota;
-                }
-            }
         }
 
     }
+    // spojí dva nodes, pokud nejsou ve stejné skupině
+
+    public void union(int prvni, int druhy) {
+        Node par1 = findparent(vrcholy.get(prvni).getHodnota());
+        Node par2 = findparent(vrcholy.get(druhy).getHodnota());
+        if (par1 != par2) {
+            if (par1.getRank() >= par2.getRank()) {
+                if (par1.getRank() == par2.getRank()) {
+                    par1.setRank(par1.getRank() + 1);
+                }
+                par2.setParent(par1.getHodnota());
+            } else {
+                par1.setParent(par2.getHodnota());
+            }
+        }
+    }
+
+}
 // třída reprezentující vrchol
 
-    class Vrchol {
+class Node {
 
-        private int rank;
-        private int parent;
-        private int hodnota;
+    private int rank;
+    private int parent;
+    private int hodnota;
 
-        public Vrchol(int index) {
-            this.rank = 0;
-            this.parent = index;
-            this.hodnota = index;
-        }
+    public Node(int index) {
+        this.rank = 0;
+        this.parent = index;
+        this.hodnota = index;
 
     }
 
-    class Hrana {
-
-        public int getCenauseku() {
-            return cenauseku;
-        }
-
-        public int getMirazateze() {
-            return mirazateze;
-        }
-
-        public int getPrvni() {
-            return prvni;
-        }
-
-        public int getDruhy() {
-            return druhy;
-        }
-
-        public int getPoradi() {
-            return poradi;
-        }
-
-        private final int prvni;
-        private final int druhy;
-        private final int cenauseku;
-        private final int mirazateze;
-        private final int poradi;
-
-        public Hrana(int od, int to, int cenauseku, int mirazateze, int poradi) {
-
-            this.prvni = od;
-            this.druhy = to;
-            this.cenauseku = cenauseku;
-            this.mirazateze = mirazateze;
-            this.poradi = poradi;
-        }
+    public int getRank() {
+        return rank;
     }
 
-    class Graf {
+    public int getParent() {
+        return parent;
+    }
 
-        ArrayList<Hrana> hrany;
+    public int getHodnota() {
+        return hodnota;
+    }
 
-        public Graf() {
-            hrany = new ArrayList();
-            //poledeti = new ArrayList();
-        }
+    public void setforGraph(int parent, int rank) {
+        this.parent = parent;
+        this.rank = rank;
+    }
 
-        public void pridejVysledek(Hrana h) {
-            hrany.add(h);
-        }
+    public void setParent(int parent) {
+        this.parent = parent;
+    }
 
-        // vypíše výsledek výsledné kostry od dětí k předkům
-        public int[] vyslednakostra(int nula) {
-            int[] vysledek = new int[nula];
-            for (int i = nula; i > 0; i--) {
-                final int j = i;
-                Hrana h = hrany.stream().filter(o -> o.getDruhy() == j).findFirst().get();
-                vysledek[i - 1] = (h.getPoradi());
-                nula--;
+    public void setHodnota(int hodnota) {
+        this.hodnota = hodnota;
+    }
+
+    public void setRank(int rank) {
+        this.rank = rank;
+    }
+
+}
+
+class Edge {
+
+    public int getCenauseku() {
+        return cenauseku;
+    }
+
+    public int getMirazateze() {
+        return mirazateze;
+    }
+
+    public int getPrvni() {
+        return prvni;
+    }
+
+    public int getDruhy() {
+        return druhy;
+    }
+
+    public int getPoradi() {
+        return poradi;
+    }
+
+    private final int prvni;
+    private final int druhy;
+    private final int cenauseku;
+    private final int mirazateze;
+    private final int poradi;
+
+    public Edge(int od, int to, int cenauseku, int mirazateze, int poradi) {
+
+        this.prvni = od;
+        this.druhy = to;
+        this.cenauseku = cenauseku;
+        this.mirazateze = mirazateze;
+        this.poradi = poradi;
+    }
+}
+
+class Graf {
+
+    // vrcholy se seznamem předků
+    ArrayList<Node> nodelist;
+    ArrayList<Edge> edges;
+
+    //ArrayList<Node> nodes;
+    public Graf(int pocet) {
+        // uložení hran pro práci s výsledkem
+        edges = new ArrayList();
+        nodelist = new ArrayList();
+        // přidá se kořen hned na začátku
+        nodelist.add(new Node(0));
+
+    }
+
+    private void removeedge(Edge e) {
+        edges.remove(e);
+    }
+
+    private void mergealg(int hodnota, int parent, int rank) {
+        Node k = new Node(hodnota);
+        k.setforGraph(parent, rank);
+        nodelist.add(k);
+    }
+
+    // vytvoření kostry - parent = rodic, rank = poradi, hodnota = cislo vrcholu
+    public void kostramake(int pocet) {
+        int akt = 0;
+        for (int i = 0; i < pocet;) {
+            final int uzelhodnota = nodelist.get(akt).getHodnota();
+            Edge hranka = null;
+            if (edges.stream().filter(o -> o.getPrvni() == uzelhodnota || o.getDruhy() == uzelhodnota).findFirst().isPresent()) {
+                if (edges.stream().filter(o -> o.getPrvni() == uzelhodnota).findFirst().isPresent()) {
+                    hranka = edges.stream().filter(o -> o.getPrvni() == uzelhodnota).findFirst().get();
+                    mergealg(hranka.getDruhy(), hranka.getPrvni(), hranka.getPoradi());
+                } else {
+                    hranka = edges.stream().filter(o -> o.getDruhy() == uzelhodnota).findFirst().get();
+                    mergealg(hranka.getPrvni(), hranka.getDruhy(), hranka.getPoradi());
+                }
+                i++;
+                edges.remove(hranka);
+            } else {
+                akt++;
             }
-            return vysledek;
+
+        }
+    }
+
+    // vypíše výsledek výsledné kostry od dětí k předkům
+    public int[] vyslednakostra(int nula) {
+        int[] vysledek = new int[nula];
+        for (int i = nula; i > 0; i--) {
+            final int tento = i;
+            vysledek[i - 1] = nodelist.stream().filter(o -> o.getHodnota() == tento).findFirst().get().getRank();
+                    
         }
 
+        return vysledek;
+    }
+
+    void pridejVysledek(Edge h) {
+        edges.add(h);
     }
 
 }
