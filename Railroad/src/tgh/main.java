@@ -24,16 +24,14 @@ public class main {
     private static final Scanner sc = new Scanner(System.in);
 
     private void setridlist() {
-        hrany.sort(
-                Comparator.comparingInt(Edge::getMirazateze).thenComparingInt(Edge::getCenauseku));
+        hrany.sort(Comparator.comparingInt(Edge::getMirazateze).thenComparingInt(Edge::getCenauseku));
     }
 
     private int[] kruskaluj(int pocet) {
-        // setřídí nejprve list dle ohodnocení hran (nejprve zátěž a poté cena) od nejmenší po největší
         setridlist();
         //pocet pridanych hran
         int count = 0;
-        for (int i = 0; i < hrany.size(); i++) {
+        for (int i = 0; i < hrany.size();) {
 
             Edge h = hrany.get(i);
             // pokud je nalezeno n-1 spojení (minimální kostra grafu)
@@ -43,16 +41,19 @@ public class main {
                 if (dis.findparent(h.getPrvni()) != dis.findparent(h.getDruhy())) {
                     dis.union(h.getPrvni(), h.getDruhy());
                     count++;
-                    g.pridejVysledek(h);
+                    i++;
+                    //g.pridejVysledek(h);
+                } else {
+                    hrany.remove(h);
                 }
             } else {
+                hrany.removeAll(hrany.subList(pocet - 1, hrany.size()));
                 // nalezeno n-1 vrcholu, je třeba přerušit
                 break;
             }
-
         }
-        g.kostramake(pocet - 1);
-        return g.vyslednakostra(pocet - 1);
+        return g.kostramake(pocet - 1, hrany);
+
 
     }
 
@@ -66,7 +67,9 @@ public class main {
     }
 
     private void pridejHrany(int od, int to, int cena, int mirazateze, int poradi) {
-        hrany.add(new Edge(od, to, cena, mirazateze, poradi));
+        if (od != to) {
+            hrany.add(new Edge(od, to, cena, mirazateze, poradi));
+        }
     }
 
     public static void main(String[] args) {
@@ -78,13 +81,13 @@ public class main {
             for (int i = 0; i < pocetvariant; i++) {
                 krus.pridejHrany(sc.nextInt(), sc.nextInt(), sc.nextInt(), sc.nextInt(), i);
             }
-            //krus.kruskaluj(pocet);
             int[] j = krus.kruskaluj(pocet);
-            for (int i = 0; i < j.length; i++) {
+            for (int i = 1; i < j.length; i++) {
                 System.out.println(j[i]);
             }
         }
     }
+
 }
 
 // třída DisjointSet udržující informace o příslušnosti ke komponentě
@@ -104,8 +107,8 @@ class DisjointSet {
             makeset(i);
         }
     }
-    // vytvoří set pro každý uzel, který je sám sobě rodičem
 
+    // vytvoří set pro každý uzel, který je sám sobě rodičem
     private void makeset(int index) {
         Node v = new Node(index);
         this.vrcholy.add(v);
@@ -140,7 +143,6 @@ class DisjointSet {
             }
         }
     }
-
 }
 // třída reprezentující vrchol
 
@@ -227,68 +229,40 @@ class Edge {
 }
 
 class Graf {
-
-    // vrcholy se seznamem předků
-    ArrayList<Node> nodelist;
-    ArrayList<Edge> edges;
-
-    //ArrayList<Node> nodes;
+    // seznam předků
+    int[] k;
     public Graf(int pocet) {
-        // uložení hran pro práci s výsledkem
-        edges = new ArrayList();
-        nodelist = new ArrayList();
-        // přidá se kořen hned na začátku
-        nodelist.add(new Node(0));
+        k = new int[pocet + 1];
 
     }
 
-    private void removeedge(Edge e) {
-        edges.remove(e);
+    private Node mergealg(int hodnota, int parent, int rank) {
+
+        Node ka = new Node(hodnota);
+        ka.setforGraph(parent, rank);
+        return ka;
     }
 
-    private void mergealg(int hodnota, int parent, int rank) {
-        Node k = new Node(hodnota);
-        k.setforGraph(parent, rank);
-        nodelist.add(k);
-    }
-
-    // vytvoření kostry - parent = rodic, rank = poradi, hodnota = cislo vrcholu
-    public void kostramake(int pocet) {
-        int akt = 0;
-        for (int i = 0; i < pocet;) {
-            final int uzelhodnota = nodelist.get(akt).getHodnota();
-            Edge hranka = null;
-            if (edges.stream().filter(o -> o.getPrvni() == uzelhodnota || o.getDruhy() == uzelhodnota).findFirst().isPresent()) {
-                if (edges.stream().filter(o -> o.getPrvni() == uzelhodnota).findFirst().isPresent()) {
-                    hranka = edges.stream().filter(o -> o.getPrvni() == uzelhodnota).findFirst().get();
-                    mergealg(hranka.getDruhy(), hranka.getPrvni(), hranka.getPoradi());
-                } else {
-                    hranka = edges.stream().filter(o -> o.getDruhy() == uzelhodnota).findFirst().get();
-                    mergealg(hranka.getPrvni(), hranka.getDruhy(), hranka.getPoradi());
+    // vytvoření kostry 
+    public int [] kostramake(int pocet, ArrayList<Edge> edges) {
+        ArrayList<Integer> actual = new ArrayList();
+        actual.add(0);
+        int akt=0;
+        while (!edges.isEmpty()) {
+            final int uzelhodnota = actual.get(akt);
+            edges.forEach(o -> {
+                if (o.getPrvni() == uzelhodnota || o.getDruhy() == uzelhodnota) {
+                    boolean rovna = (o.getPrvni() == uzelhodnota);
+                    Node lko = ((rovna) ? (mergealg(o.getDruhy(), o.getPrvni(), o.getPoradi()))
+                            : (mergealg(o.getPrvni(), o.getDruhy(), o.getPoradi())));
+                    k[lko.getHodnota()] = lko.getRank();
+                    actual.add(lko.getHodnota());
                 }
-                i++;
-                edges.remove(hranka);
-            } else {
-                akt++;
-            }
-
+            });
+            edges.removeIf(o -> o.getPrvni() == uzelhodnota || o.getDruhy() == uzelhodnota);
+            akt++;
         }
-    }
-
-    // vypíše výsledek výsledné kostry od dětí k předkům
-    public int[] vyslednakostra(int nula) {
-        int[] vysledek = new int[nula];
-        for (int i = nula; i > 0; i--) {
-            final int tento = i;
-            vysledek[i - 1] = nodelist.stream().filter(o -> o.getHodnota() == tento).findFirst().get().getRank();
-                    
-        }
-
-        return vysledek;
-    }
-
-    void pridejVysledek(Edge h) {
-        edges.add(h);
+        return k;
     }
 
 }
